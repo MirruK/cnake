@@ -1,0 +1,110 @@
+What we want: Snake game
+- Start random place & random direction
+- Move with WASD
+- Food spawns at random location
+- Snake moves with certain speed increasing per food eaten
+- Snake moves in the same direction forever unless the player turns with WASD
+- Close game with Q
+- Pause game with ESC
+
+main.cpp
+
+- init window
+- main game loop
+- calling render functions
+- input handling
+- game state object
+- calls high level functions on Snake and GameContext objects
+
+Snake.cpp / Snake.hpp
+
+Logic related to the snek
+
+GameContext.cpp / GameContext.hpp
+
+attrs:
+
+int score (number of food eaten during current game)
+	void resetScore();
+	int getScore();
+
+enum GameState current_state;
+	valid values:
+		0: START
+		1: RUNNING
+		2: PAUSED
+		3: FAILED
+
+	invariants:
+		The allowed transitions are:
+		START -> RUNNING (init score and Snake state)
+		RUNNING -> PAUSED (preserve state, halt game loop)
+		RUNNING -> FAILED (reset score, log results)
+		PAUSED -> RUNNING (countdown timer and then resume game loop)
+		PAUSED -> START (reset score)
+		FAILED -> START (reset score)
+		Failed -> RUNNING (reset score and init Snake state)
+		
+	methods:
+		void setState(GameState state);
+
+
+	Entity management:
+		1 Snek
+		N Food
+
+	GameContext informs the renderer of the entity states
+
+
+Class related to keeping track of game state
+(Is the game paused or active? Current score? etc.)
+
+GameUI.cpp / GameUI.hpp
+
+Rendering logic and UI
+
+	Takes GameContext->GameState and renders correct screen
+
+	START:
+		Show "Start game"-button (START->RUNNING)
+		Show current best (int)
+	RUNNING:
+		Show current score
+		Render Snake
+		(ESC pressed) (RUNNING->PAUSED)
+	PAUSED:
+		Show current score
+		Show "Resume"-button
+		Show "Main menu"-button (PAUSED->START)
+	FAILED:
+		Show score and previous best score
+		Show "Main menu"-button (FAILED->START)
+		Show "Restart"-button (FAILED->RUNNING)
+
+	Rendrer gets state of entities from GameContext
+	Translates the tiled coordinates to actual pixel x,y
+	locations on the screen and draws them
+
+
+
+TODO NEXT:
+	[x] Integrate VCPKG with CMake and install deps
+	[x] Open game window
+	[x] Init gamecontext to START
+	[x] Implement UI screens
+	[x] Implement State transition logic
+	[x] Make UI buttons work for transitioning between screens
+	[] Render shapes	
+	[] Render game board
+
+
+TODO to make this an engine
+	[] Clever FPS handling, render FPS cap separate from game logic updates/s
+	[] Abstraction for keyboard shortcuts
+	[] Entity manager
+	  [] Entities have attached handlers ran on creation, destruction, and on each logic update
+	[] UI abstraction layer
+	[] Game World abstraction layer
+	[] 
+
+
