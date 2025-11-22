@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <Common.hpp>
 
 void render_game_ui();
 void render_snake();
@@ -22,6 +23,8 @@ class RenderContext {
   public:
     int WINDOW_WIDTH;
     int WINDOW_HEIGHT;
+    Point BOARD_POS;
+    int TILE_SIZE;
     SDL_Renderer* renderer;
     TTF_Font* get_font();
     void set_font(TTF_Font* font);

@@ -1,7 +1,9 @@
 #include <iostream>
 #include <map>
+#include <memory>
 #include <utility>
 #include "GameState.hpp"
+#include "Snake.hpp"
 
 void GameContext::log_game_context() {
     std::cout << (int)this->get_state() << this->score << '\n';
@@ -13,6 +15,9 @@ GameContext::init_transitions() {
         { {GameState::START, GameState::RUNNING}, [](GameContext& ctx) {
             ctx.score = 0;
             // TODO: Reinitialize the snake here
+            if(ctx.get_snake().expired()) {
+                ctx.snake = std::shared_ptr<Snake>(new Snake());
+            }
             std::cout << "Game started!\n";
         }},
         { {GameState::RUNNING, GameState::PAUSED}, [](GameContext& ctx) {
@@ -24,6 +29,9 @@ GameContext::init_transitions() {
         }},
         { {GameState::RUNNING, GameState::FAILED}, [](GameContext& ctx) {
             ctx.score = 0;
+            //ctx.snake.reset();
+            auto s = std::shared_ptr<Snake>(new Snake());
+            ctx.snake.swap(s);
             std::cout << "Game over!\n";
         }},
         { {GameState::PAUSED, GameState::RUNNING}, [](GameContext& ctx) {
@@ -68,4 +76,9 @@ void GameContext::transition(GameState next) {
   // Run the side effect registered for this transition
   func->second(*this);
   this->game_state = next;
+}
+
+std::weak_ptr<Snake> GameContext::get_snake() {
+    // Q: Should this be a shared or weak pointer? Why?
+    return std::weak_ptr<Snake>(this->snake);
 }

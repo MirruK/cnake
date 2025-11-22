@@ -22,6 +22,8 @@ target_sources(cnake PRIVATE
     src/RenderContext.cpp
     src/Snake.hpp
     src/Snake.cpp
+    src/Common.hpp
+    src/Common.cpp
 )
 find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_ttf CONFIG REQUIRED)

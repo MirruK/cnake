@@ -27,12 +27,15 @@ class GameContext {
     int get_score();
     void log_game_context();
     static GameContext* get_instance();
+    std::weak_ptr<Snake> get_snake();
+    /* Board size should be expressed in the number of tiles, not raw pixels */
+    Point BOARD_SIZE;
 
   private: 
     static GameContext* instance;
     GameContext();
     GameState game_state;
-    std::unique_ptr<Snake> snake;
+    std::shared_ptr<Snake> snake;
     std::vector<Food> food;
     using StateTransitionMap = std::map<std::pair<GameState, GameState>, std::function<void(GameContext&)>>;
     using StateTransitionSideEffect = std::function<void(GameContext&)>;

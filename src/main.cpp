@@ -1,10 +1,14 @@
+#include "Snake.hpp"
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_render.h>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
+#include <iterator>
 #include <thread>
 #include <unistd.h>
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
@@ -13,7 +17,6 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include "RenderContext.hpp"
 #include "GameState.hpp"
-#include "Snake.hpp"
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -64,7 +67,16 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     auto game_ctx = GameContext::get_instance();
     // TODO: Setup game context
-    Food::set_position_bounds(Point{width, height});
+    // Food::set_position_bounds(Point{0,0}, Point{width, height});
+    Point board_pos = { render_ctx->WINDOW_WIDTH / 12, render_ctx->WINDOW_HEIGHT / 12};
+    render_ctx->BOARD_POS = board_pos;
+    // Board size is total height - bottom padding - top padding (height / 12)
+    Point board_size = {50,50};
+    // Tile size is chosen such that the game board fits in the window
+    render_ctx->TILE_SIZE = p_min(Point {render_ctx->WINDOW_WIDTH - 50, render_ctx->WINDOW_HEIGHT - 50} / board_size);
+    game_ctx->BOARD_SIZE = board_size;
+    std::cout << "Tile size: " << render_ctx->TILE_SIZE << '\n';
+    std::cout << "Board pos: " << render_ctx->BOARD_POS << '\n';
 
     SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
@@ -77,6 +89,41 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     auto game_ctx = GameContext::get_instance();
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;  /* end the program, reporting success to the OS. */
+    }
+    if (event->key.down){
+        Snake* s;
+        switch (event->key.key) {
+            case SDLK_UP:
+                s = game_ctx->get_snake().lock().get();
+                if (s->get_direction() == SnakeDirection::DOWN) {
+                    break;
+                }
+                s->set_direction(SnakeDirection::UP);
+                break;
+            case SDLK_RIGHT:
+                s = game_ctx->get_snake().lock().get();
+                if (s->get_direction() == SnakeDirection::LEFT) {
+                    break;
+                }
+                s->set_direction(SnakeDirection::RIGHT);
+                break;
+            case SDLK_DOWN:
+                s = game_ctx->get_snake().lock().get();
+                if (s->get_direction() == SnakeDirection::UP) {
+                    break;
+                }
+                s->set_direction(SnakeDirection::DOWN);
+                break;
+            case SDLK_LEFT:
+                s = game_ctx->get_snake().lock().get();
+                if (s->get_direction() == SnakeDirection::RIGHT) {
+                    break;
+                }
+                s->set_direction(SnakeDirection::LEFT);
+                break;
+            default:
+            break;
+        }
     }
     if (event->key.key == SDLK_1 && event->key.down){
         game_ctx->transition(GameState::RUNNING);
@@ -93,7 +140,28 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     auto render_ctx = RenderContext::get_instance();
+    auto game_ctx = GameContext::get_instance();
+    SDL_SetRenderDrawColor(render_ctx->renderer, 30, 30, 30, 255);
+    SDL_RenderClear(render_ctx->renderer);
     render_game_ui();
+    if (game_ctx->get_state() == GameState::RUNNING){
+        if (frame_count == 0){
+            auto s= game_ctx->get_snake().lock().get();
+            s->step();
+            int c = 0;
+            for (auto part : s->get_body()) {
+                if (c != 0 && part == s->get_body().front()) {
+                    game_ctx->transition(GameState::FAILED);
+                    // Q: Does this release the weak_ptr lock?
+                    goto skip_render;
+                }
+                c++;
+            }
+        }
+        render_game_container();
+        render_snake();
+        skip_render:
+    }
 
     SDL_RenderPresent(renderer);
 

@@ -1,8 +1,10 @@
 #include "GameState.hpp"
 #include "RenderContext.hpp"
+#include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_surface.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -78,15 +80,32 @@ SDL_Texture* RenderContext::get_text(std::string key, SDL_Color color, const std
 
 void render_game_container(){
   auto render_ctx = RenderContext::get_instance();
-  Point board_pos = { render_ctx->WINDOW_WIDTH / 2, render_ctx->WINDOW_HEIGHT / 12};
-  // Board size is total height - bottom padding - top padding (height / 12)
-  Point board_size = { render_ctx->WINDOW_WIDTH - 60, render_ctx->WINDOW_HEIGHT - (render_ctx->WINDOW_HEIGHT / 6)};
+  auto game_ctx = GameContext::get_instance();
+  Point board_pos = render_ctx->BOARD_POS;
+  Point board_size = game_ctx->BOARD_SIZE * render_ctx->TILE_SIZE;
   auto frect = SDL_FRect {(float)board_pos.x,(float)board_pos.y,(float)board_size.x, (float)board_size.y};
   SDL_SetRenderDrawColor(render_ctx->renderer, 200, 200, 200, 255);
   SDL_RenderRect(render_ctx->renderer, &frect);
 }
-void render_snake(){}
-
+void render_snake(){
+  auto render_ctx = RenderContext::get_instance();
+  auto game_ctx = GameContext::get_instance();
+  auto snek = game_ctx->get_snake();
+  auto snake = snek.lock();
+  if (!snek.expired()){
+    auto s = snake.get();
+    auto body = s->get_body();
+    auto ts = render_ctx->TILE_SIZE;
+    auto bposx = render_ctx->BOARD_POS.x;
+    auto bposy = render_ctx->BOARD_POS.y;
+    for(const auto& part : body){
+      SDL_FRect r = {(float)part.x*ts + bposx, (float)part.y*ts + bposy, (float)ts, (float)ts};
+      SDL_SetRenderDrawColor(render_ctx->renderer, 0, 100, 255, 255);
+      SDL_RenderRect(render_ctx->renderer, &r);
+    }
+  }
+  snek.reset();
+}
 
 void render_game_ui() {
   auto render_ctx = RenderContext::get_instance();
