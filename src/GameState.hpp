@@ -3,7 +3,7 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <vector>
+#include <unordered_set>
 #include "Snake.hpp"
 
 enum class GameState {
@@ -13,6 +13,14 @@ enum class GameState {
   FAILED,
 };
 
+struct PointHash {
+    std::size_t operator()(Point const& p) const noexcept {
+        // Thanks gipiti
+        return (std::hash<int>()(p.x) * 31u) ^ std::hash<int>()(p.y);
+    }
+};
+
+bool check_food();
 
 class GameContext {
   constexpr auto mktransition(GameState curr, GameState next){
@@ -28,7 +36,8 @@ class GameContext {
     void log_game_context();
     static GameContext* get_instance();
     std::weak_ptr<Snake> get_snake();
-    /* Board size should be expressed in the number of tiles, not raw pixels */
+    std::unordered_set<Point, PointHash>& get_food();
+/* Board size should be expressed in the number of tiles, not raw pixels */
     Point BOARD_SIZE;
 
   private: 
@@ -36,7 +45,7 @@ class GameContext {
     GameContext();
     GameState game_state;
     std::shared_ptr<Snake> snake;
-    std::vector<Food> food;
+    std::unordered_set<Point, PointHash> food;
     using StateTransitionMap = std::map<std::pair<GameState, GameState>, std::function<void(GameContext&)>>;
     using StateTransitionSideEffect = std::function<void(GameContext&)>;
 

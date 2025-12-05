@@ -107,6 +107,19 @@ void render_snake(){
   snek.reset();
 }
 
+void render_food(){
+  auto game_ctx = GameContext::get_instance();
+  auto f = game_ctx->get_food();
+  auto render_ctx = RenderContext::get_instance();
+  auto t = render_ctx->TILE_SIZE;
+  auto bp = render_ctx->BOARD_POS;
+  for (const auto& food : f) {
+    auto r = SDL_FRect{(float)food.x*t + bp.x, (float)food.y*t + bp.y, (float)t, (float)t };
+    SDL_SetRenderDrawColor(render_ctx->renderer, 255, 50, 100, 255);
+    SDL_RenderRect(render_ctx->renderer, &r);
+}
+}
+
 void render_game_ui() {
   auto render_ctx = RenderContext::get_instance();
   SDL_FRect dst_rect1;

@@ -10,6 +10,7 @@
 
 void render_game_ui();
 void render_snake();
+void render_food();
 void render_game_container();
 
 struct SDLTextureDeleter {
@@ -30,6 +31,7 @@ class RenderContext {
     void set_font(TTF_Font* font);
     void set_renderer(SDL_Renderer* renderer);
     std::string update_key(std::string str, TexturePtr texture);
+    // TODO: Invalidate function for text cache
     SDL_Texture* get_text(std::string key, SDL_Color color, const std::string text_string);
     static RenderContext* get_instance();
   private:

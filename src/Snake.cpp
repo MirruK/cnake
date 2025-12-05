@@ -1,26 +1,43 @@
 #include "Snake.hpp"
+#include "Common.hpp"
 #include "GameState.hpp"
+#include <random>
+#include <vector>
 // SNek implementation
 
-Point Food::position_bounds = Point{0,0};
+Point create_food() {
+  auto game_ctx = GameContext::get_instance();
 
-/* Must be called before creating Food-objects, eg. with {board_size.x, board_size.y} */
-void Food::set_position_bounds(Point pos) {
-  Food::position_bounds = pos;
+  Point bs = game_ctx->BOARD_SIZE;
+  static std::mt19937 rng(std::random_device{}()); 
+  std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+  auto r1 = dist(rng);
+  auto r2 = dist(rng);
+  return Point{(int)((float)bs.x * r1), (int)((float)bs.y * r2)};
+};
+
+Point Snake::get_head() {
+  return this->body.front();
 }
-
-// TODO: Use method that allows specifying random range
-Food::Food(): position(100, 100) {};
 
 
 // TODO: Use board_midpoint to init snake
-Snake::Snake(): body(std::list<Point>({Point{25,25}, Point{25,26}, Point{25,27}, Point{25,28}})), direction(SnakeDirection::UP) {}
+Snake::Snake(int init_length): direction(SnakeDirection::UP) {
+  auto game_ctx = GameContext::get_instance();
 
+  Point bs = game_ctx->BOARD_SIZE;
+  Point midpoint = bs / 2;
+  std::vector<Point> v = {midpoint};
+  if (init_length > 0) {
+  v.reserve(init_length);
+    for (int i = 0; i < init_length - 1; i++){
+      v.push_back(v[i] + Point{0, 1} );
 
-// void Snake::reset() {
-//   this->body = std::li
-  
-// }
+    }
+  }
+  this->body =  std::list<Point>(v.begin(), v.end());
+}
 
 SnakeDirection Snake::get_direction() {
   return this->direction;

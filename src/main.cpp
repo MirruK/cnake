@@ -51,7 +51,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
-    TTF_Font *font = TTF_OpenFont("/home/mirek/.local/share/fonts/AzeretMono-Regular.ttf", 72.0f);
+    TTF_Font *font = TTF_OpenFont("/home/mirek/.local/share/fonts/IosevkaTerm-Medium.ttf", 72.0f);
     
     if(font == NULL) {
         auto err = SDL_GetError();
@@ -66,8 +66,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     render_ctx->WINDOW_WIDTH = width;
 
     auto game_ctx = GameContext::get_instance();
-    // TODO: Setup game context
-    // Food::set_position_bounds(Point{0,0}, Point{width, height});
     Point board_pos = { render_ctx->WINDOW_WIDTH / 12, render_ctx->WINDOW_HEIGHT / 12};
     render_ctx->BOARD_POS = board_pos;
     // Board size is total height - bottom padding - top padding (height / 12)
@@ -157,8 +155,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
                 }
                 c++;
             }
+            if(check_food()) {
+                s->grow();
+            }
         }
         render_game_container();
+        render_food();
         render_snake();
         skip_render:
     }
