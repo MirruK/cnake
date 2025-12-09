@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL_init.h>
+#include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <memory>
@@ -31,8 +32,8 @@ class RenderContext {
     void set_font(TTF_Font* font);
     void set_renderer(SDL_Renderer* renderer);
     std::string update_key(std::string str, TexturePtr texture);
-    // TODO: Invalidate function for text cache
-    SDL_Texture* get_text(std::string key, SDL_Color color, const std::string text_string);
+    SDL_Texture* get_text(std::string key, SDL_Color color, const std::string text_string, bool invalidate = false);
+    void render_text_at(std::string key, std::string text, SDL_Color c, SDL_FRect* text_rect, bool center = true, bool invalidate = false);
     static RenderContext* get_instance();
   private:
     RenderContext();

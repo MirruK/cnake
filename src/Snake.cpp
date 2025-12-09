@@ -9,6 +9,7 @@ Point create_food() {
   auto game_ctx = GameContext::get_instance();
 
   Point bs = game_ctx->BOARD_SIZE;
+  // Static to not recreate rng object every call
   static std::mt19937 rng(std::random_device{}()); 
   std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
@@ -22,7 +23,6 @@ Point Snake::get_head() {
 }
 
 
-// TODO: Use board_midpoint to init snake
 Snake::Snake(int init_length): direction(SnakeDirection::UP) {
   auto game_ctx = GameContext::get_instance();
 
@@ -93,7 +93,7 @@ void Snake::step(){
   auto max_y = game_ctx->BOARD_SIZE.y;
   switch (dir) {
   case SnakeDirection::UP:
-    new_head = head.y > 0 ? Point {head.x + 0, head.y - 1} : Point {head.x, max_y};
+    new_head = head.y > 0 ? Point {head.x + 0, head.y - 1} : Point {head.x, max_y-1};
     this->body.emplace_front(new_head);
     this->body.pop_back();
     break;
@@ -108,7 +108,7 @@ void Snake::step(){
     this->body.pop_back();
     break;
   case SnakeDirection::LEFT:
-    new_head = head.x > 0 ? Point {head.x - 1, head.y} : Point {max_x, head.y};
+    new_head = head.x > 0 ? Point {head.x - 1, head.y} : Point {max_x-1, head.y};
     this->body.emplace_front(new_head);
     this->body.pop_back();
     break;

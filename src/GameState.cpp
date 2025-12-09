@@ -15,7 +15,7 @@ std::map<std::pair<GameState, GameState>, GameContext::StateTransitionSideEffect
 GameContext::init_transitions() {
     return {
         { {GameState::START, GameState::RUNNING}, [](GameContext& ctx) {
-            ctx.score = 0;
+             ctx.reset_score();
             ctx.food.clear();
             if(ctx.get_snake().expired()) {
                 ctx.snake = std::shared_ptr<Snake>(new Snake(4));
@@ -27,13 +27,13 @@ GameContext::init_transitions() {
             std::cout << "Pausing the game...\n";
         }},
         { {GameState::PAUSED, GameState::START}, [](GameContext& ctx) {
-            ctx.score = 0;
+             ctx.reset_score();
             std::cout << "Returning to start menu.\n";
             auto s = std::shared_ptr<Snake>(new Snake(4));
             ctx.snake.swap(s);
         }},
         { {GameState::RUNNING, GameState::FAILED}, [](GameContext& ctx) {
-            ctx.score = 0;
+             ctx.reset_score();
             //ctx.snake.reset();
             auto s = std::shared_ptr<Snake>(new Snake(4));
             ctx.snake.swap(s);
@@ -68,7 +68,7 @@ bool check_food(){
         if(value ==  s.lock().get()->get_head()) {
             auto res = f->erase(value);
             f->insert(create_food());
-            game_ctx->incrementScore();
+            game_ctx->increment_score();
             return true;
     }
     }
@@ -84,8 +84,14 @@ GameContext* GameContext::get_instance() {
     return instance;
 }
 
-void GameContext::incrementScore() {
+void GameContext::increment_score() {
   this->score++;
+  this->score_changed = true;
+}
+
+void GameContext::reset_score() {
+  this->score = 0;
+  this->score_changed = true;
 }
 
 void GameContext::transition(GameState next) {
@@ -93,9 +99,8 @@ void GameContext::transition(GameState next) {
   if (func == transition_side_effects.end()){
     // Invalid or undefined state transition pair
     // TODO: Implement proper logging mechanism with debug logging
-    // TODO: Allow resetting of state with a keybind
     std::cout << "Invalid state transition initiated" << '\n'; 
-    this->game_state = next;
+    // this->game_state = next;
     return;
   } 
   // Run the side effect registered for this transition

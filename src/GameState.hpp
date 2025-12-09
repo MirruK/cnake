@@ -15,7 +15,7 @@ enum class GameState {
 
 struct PointHash {
     std::size_t operator()(Point const& p) const noexcept {
-        // Thanks gipiti
+        // AI: Thanks gipiti
         return (std::hash<int>()(p.x) * 31u) ^ std::hash<int>()(p.y);
     }
 };
@@ -29,7 +29,9 @@ class GameContext {
 
   public:
     int score;
-    void incrementScore();
+    bool score_changed;
+    void increment_score();
+    void reset_score();
     void transition(GameState next);
     GameState get_state();
     int get_score();

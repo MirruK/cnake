@@ -3,12 +3,14 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <iostream>
-#include <iterator>
 #include <thread>
 #include <unistd.h>
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
@@ -50,8 +52,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         SDL_Log("Couldn't initialize SDL_ttf: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-
-    TTF_Font *font = TTF_OpenFont("/home/mirek/.local/share/fonts/IosevkaTerm-Medium.ttf", 72.0f);
+    // TODO: Make this work on all systems
+    TTF_Font *font = TTF_OpenFont("assets/freefont-ttf/sfd/FreeMono.ttf", 48.0f);
     
     if(font == NULL) {
         auto err = SDL_GetError();
@@ -66,13 +68,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     render_ctx->WINDOW_WIDTH = width;
 
     auto game_ctx = GameContext::get_instance();
-    Point board_pos = { render_ctx->WINDOW_WIDTH / 12, render_ctx->WINDOW_HEIGHT / 12};
-    render_ctx->BOARD_POS = board_pos;
     // Board size is total height - bottom padding - top padding (height / 12)
     Point board_size = {50,50};
     // Tile size is chosen such that the game board fits in the window
-    render_ctx->TILE_SIZE = p_min(Point {render_ctx->WINDOW_WIDTH - 50, render_ctx->WINDOW_HEIGHT - 50} / board_size);
+    render_ctx->TILE_SIZE = p_min(Point {render_ctx->WINDOW_WIDTH - 50, render_ctx->WINDOW_HEIGHT - 50} / board_size) - 1;
     game_ctx->BOARD_SIZE = board_size;
+    // Point board_pos = { render_ctx->WINDOW_WIDTH / 2 - (board_size.x), render_ctx->WINDOW_HEIGHT / 2 - (board_size.y)};
+    Point board_pos = {64, 64+16};
+    render_ctx->BOARD_POS = board_pos;
     std::cout << "Tile size: " << render_ctx->TILE_SIZE << '\n';
     std::cout << "Board pos: " << render_ctx->BOARD_POS << '\n';
 
@@ -137,11 +140,38 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
+    static int frame_count = 0;
+    static SDL_Texture* fps_texture = nullptr;
+    static std::chrono::time_point<std::chrono::system_clock> tmp;
+    static microseconds duration;
+    SDL_Color txt_color;
+    static float curr_fps;
+    float prev_fps;
     auto render_ctx = RenderContext::get_instance();
     auto game_ctx = GameContext::get_instance();
     SDL_SetRenderDrawColor(render_ctx->renderer, 30, 30, 30, 255);
     SDL_RenderClear(render_ctx->renderer);
     render_game_ui();
+
+    auto dst_rect1 = SDL_FRect();
+    // if (frame_count == 0) {
+    //     tmp = std::chrono::high_resolution_clock::now();
+    //     duration = duration_cast<microseconds>(tmp - timer);
+    //     timer = tmp;
+    //     txt_color = SDL_Color(200, 60, 70, 255);
+    //     dst_rect1.x =  0;
+    //     dst_rect1.y =  0;
+    //     dst_rect1.w =  render_ctx->WINDOW_WIDTH / 5.0f;
+    //     dst_rect1.h =  24;
+    //     dst_rect1.x += (dst_rect1.w*2 + 32);
+    //     dst_rect1.w -= 120;
+    //     prev_fps = curr_fps;
+    //     curr_fps = (10.0f / (float)(duration.count() * std::pow(10, -6)));
+    //     tx = render_ctx->get_text("FPS_COUNTER", txt_color, std::format("FPS: {}", curr_fps), curr_fps != prev_fps);
+    // }
+    //
+    
+    
     if (game_ctx->get_state() == GameState::RUNNING){
         if (frame_count == 0){
             auto s= game_ctx->get_snake().lock().get();
@@ -162,21 +192,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         render_game_container();
         render_food();
         render_snake();
+
         skip_render:
     }
-
     SDL_RenderPresent(renderer);
-
     frame_count =  (frame_count + 1) % 10;
     std::this_thread::sleep_for(std::chrono::milliseconds((int)desired_frametime));
-
-    if (frame_count == 0) {
-        auto tmp = std::chrono::high_resolution_clock::now();
-        auto duration = duration_cast<microseconds>(tmp - timer);
-        timer = tmp;
-        // std::cout << (10.0f / (float)(duration.count() * std::pow(10, -6))) << "FPS" << std::endl;
-    }
-
     return SDL_APP_CONTINUE;
 }
 

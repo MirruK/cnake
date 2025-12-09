@@ -8,14 +8,12 @@
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_surface.h>
 #include <SDL3_ttf/SDL_ttf.h>
-#include <cstdio>
-#include <iostream>
-#include <ostream>
 
+// AI: Thanks gipiti
 void SDLTextureDeleter::operator()(SDL_Texture* tx) const noexcept {
-    if (tx){
-      std::cout << "Destroying texture with ptr: " << tx << "\n";
-      SDL_DestroyTexture(tx);}
+  if (tx){
+    SDL_DestroyTexture(tx);
+  }
 };
 
 RenderContext::RenderContext(){};
@@ -26,6 +24,20 @@ RenderContext* RenderContext::get_instance(){
   }
   return instance;
 };
+
+void RenderContext::render_text_at(std::string key, std::string text, SDL_Color c, SDL_FRect* dst_rect, bool center, bool invalidate) {
+  auto texture = this->get_text(key, c, text, invalidate);
+  float w, h;
+  SDL_GetTextureSize(texture, &w, &h);
+  dst_rect->w = w;
+  dst_rect->h = h;
+  auto temp_rect = SDL_FRect(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h);
+  if (center) {
+    temp_rect.x -= w / 2.0f;
+    temp_rect.y -= h / 2.0f;
+  }
+  SDL_RenderTexture(this->renderer, texture, nullptr, &temp_rect);
+}
 
 TTF_Font* RenderContext::get_font(){
   return this->font;
@@ -40,25 +52,16 @@ void RenderContext::set_renderer(SDL_Renderer* renderer){
 }
 
 std::string RenderContext::update_key(std::string key, TexturePtr texture) {
-  int n = 1;
-  while(this->texture_cache.contains(key)) {
-    if (n==1) {
-    key.append(std::to_string(n));
-    } else{
-      // Key is guaranteed to have at least one element!
-      key.pop_back();
-      key.append(std::to_string(n));
-    }
-    n++;
-  }
   this->texture_cache[key] = std::move(texture);
   return key;
 }
 
-SDL_Texture* RenderContext::get_text(std::string key, SDL_Color color, const std::string text_string) {
-  auto it = this->texture_cache.find(key);
-  if (it != this->texture_cache.end()){
-    return it->second.get();
+SDL_Texture* RenderContext::get_text(std::string key, SDL_Color color, const std::string text_string, bool invalidate) {
+  if (!invalidate){
+    auto it = this->texture_cache.find(key);
+    if (it != this->texture_cache.end()){
+      return it->second.get();
+    }
   }
 
   SDL_Surface s;
@@ -122,56 +125,52 @@ void render_food(){
 
 void render_game_ui() {
   auto render_ctx = RenderContext::get_instance();
-  SDL_FRect dst_rect1;
-  SDL_Color txt_color;
+  SDL_FRect text_rect = SDL_FRect();
+  SDL_Color text_color;
+  SDL_Texture* tx = nullptr;
   GameContext* game_ctx = GameContext::get_instance();
   std::string text_string;
   switch (game_ctx->get_state()) {
   case GameState::START: 
       text_string = "START: Press 1 to play";
-      txt_color = SDL_Color(200, 60, 70, 255);
+      text_color = SDL_Color(200, 60, 70, 255);
       /* Render game title (TOP-MIDDLE)*/
-      dst_rect1 = SDL_FRect();
-      // 50%
-      dst_rect1.w =  render_ctx->WINDOW_WIDTH / 2.0f;
-      // 72pt
-      dst_rect1.h =  48;
-      dst_rect1.x =  0;
-      dst_rect1.y =  (render_ctx->WINDOW_HEIGHT / 6.0f);
-      SDL_RenderTexture(render_ctx->renderer, render_ctx->get_text("START", txt_color, text_string), NULL, &dst_rect1);
+      text_rect.x =  render_ctx->WINDOW_WIDTH / 2.0f;
+      text_rect.y =  render_ctx->WINDOW_HEIGHT / 6.0f;
+      render_ctx->render_text_at("START", text_string, text_color, &text_rect);
       break;
   case GameState::RUNNING:
       text_string = "RUNNING: Press 2 to pause";
-      txt_color = SDL_Color(200, 60, 70, 255);
-      dst_rect1 = SDL_FRect();
-      dst_rect1.x =  0;
-      dst_rect1.y =  0;
-      dst_rect1.w =  render_ctx->WINDOW_WIDTH / 8.0f;
-      dst_rect1.h =  16;
-      SDL_RenderTexture(render_ctx->renderer, render_ctx->get_text("RUNNING", txt_color, text_string), NULL, &dst_rect1);
-      dst_rect1.x += (dst_rect1.w + 32);
-      SDL_RenderTexture(render_ctx->renderer, render_ctx->get_text("SCORE_COUNTER", txt_color, std::format("SCORE: {}", game_ctx->get_score())), NULL, &dst_rect1);
-      
+      text_color = SDL_Color(200, 60, 70, 255);
+      // RENDER PAUSE TEXT
+      text_rect.x = 0;
+      text_rect.y = 0;
+      render_ctx->render_text_at("RUNNING", text_string, text_color, &text_rect, false);
+      // REPOSITION RECT
+      text_rect.x += (text_rect.w + 64);
+      text_rect.w -= 120;
+      // RENDER SCORE COUNTER
+      render_ctx->render_text_at("SCORE_COUNTER", std::format("SCORE: {}", game_ctx->get_score()), text_color, &text_rect, false, game_ctx->score_changed);
+      // We rendered the changed score and cached the texture,
+      // therefore stop triggering invalidations of the texture cache
+      game_ctx->score_changed = false;
       break;
   case GameState::PAUSED:
-      text_string = "PAUSED: Press 3 to continue";
-      txt_color = SDL_Color(200, 60, 70, 255);
-      dst_rect1 = SDL_FRect();
-      dst_rect1.x =  800 / 2.0f;
-      dst_rect1.y =  600 / 2.0f;
-      dst_rect1.w =  200;
-      dst_rect1.h =  28;
-      SDL_RenderTexture(render_ctx->renderer, render_ctx->get_text("PAUSED", txt_color, text_string), NULL, &dst_rect1);
+      text_string = "PAUSED: Press 1 to continue";
+      text_color = SDL_Color(200, 60, 70, 255);
+      text_rect.x =  render_ctx->WINDOW_WIDTH / 2.0f;
+      text_rect.y =  render_ctx->WINDOW_HEIGHT / 6.0f;
+      render_ctx->render_text_at("PAUSED", text_string, text_color, &text_rect);
+      text_string = "PAUSED: Press 3 to return to start";
+      text_rect.y += 16+text_rect.h;
+      render_ctx->render_text_at("PAUSED_BACK", text_string, text_color, &text_rect);
       break;
   case GameState::FAILED:
       text_string = "FAILED: Press 1 to go to start";
-      txt_color = SDL_Color(200, 60, 70, 255);
-      dst_rect1 = SDL_FRect();
-      dst_rect1.x =  800 / 2.0f;
-      dst_rect1.y =  600 / 2.0f;
-      dst_rect1.w =  200;
-      dst_rect1.h =  28;
-      SDL_RenderTexture(render_ctx->renderer, render_ctx->get_text("FAILED", txt_color, text_string), NULL, &dst_rect1);
+      text_color = SDL_Color(200, 60, 70, 255);
+      text_rect.x =  render_ctx->WINDOW_HEIGHT / 2.0f;
+      text_rect.y =  render_ctx->WINDOW_HEIGHT / 6.0f;
+      render_ctx->render_text_at("FAILED", text_string, text_color,&text_rect);
       break;
   }
 }
